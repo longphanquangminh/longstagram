@@ -5,9 +5,25 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
-# app.secret_key = os.environ.get("SECRET_KEY", "dev_secret_key") # TODO: use later, no need for now
+app.secret_key = os.environ.get("SECRET_KEY", "dev_secret_key")
 
-users = {}
+users = {} # like a mock db
+
+def token_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+            username = get_jwt_identity()
+            current_user = users.get(username)
+
+            if not current_user:
+                return api_response(message="User does not exist", status=404)
+
+            return fn(current_user, *args, **kwargs)
+        except Exception as e:
+            return api_response(message=f"[ErrorInvalidToken]: {str(e)}", status=401)
+    return wrapper
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -40,6 +56,40 @@ def register():
 
     users[username] = {'password': pw_hash, 'profile': profile}
     return api_response(data=profile, message='User registered successfully', status=201)
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
+
+    invalidErrorText = 'Invalid username or password'
+
+    if username not in users:
+        return jsonify({'error': invalidErrorText}), 401
+
+    if not check_password_hash(users[username].password, password):
+        return jsonify({'error': invalidErrorText}), 401
+
+    access_token = create_access_token(identity=username)
+    refresh_token = create_refresh_token(identity=username)
+
+    return api_response(
+        message='Login successfully!',
+        data={
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            "user": users[username].profile,
+        })
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    return api_response(message='Logout successful')
+
+@app.route('/profile', methods=['GET'])
+@token_required
+def get_profile():
+    return api_response(data=current_user.profile)
 
 def api_response(data=None, message=None, status=200):
     response = {
