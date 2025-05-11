@@ -1,11 +1,16 @@
 import os
 from flask import Flask, request, jsonify
-from functools import wraps
+from flask_jwt_extended import create_access_token, create_refresh_token
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import JWTManager
 from datetime import datetime
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from utils import api_response
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev_secret_key")
+jwt = JWTManager(app)
 
 users = {} # like a mock db
 
@@ -68,7 +73,7 @@ def login():
     if username not in users:
         return jsonify({'error': invalidErrorText}), 401
 
-    if not check_password_hash(users[username].password, password):
+    if not check_password_hash(users[username]['password'], password):
         return jsonify({'error': invalidErrorText}), 401
 
     access_token = create_access_token(identity=username)
@@ -79,7 +84,7 @@ def login():
         data={
             'access_token': access_token,
             'refresh_token': refresh_token,
-            "user": users[username].profile,
+            "user": users[username]['profile'],
         })
 
 @app.route('/logout', methods=['POST'])
@@ -88,22 +93,8 @@ def logout():
 
 @app.route('/profile', methods=['GET'])
 @token_required
-def get_profile():
-    return api_response(data=current_user.profile)
-
-def api_response(data=None, message=None, status=200):
-    response = {
-        'success': 200 <= status < 300,
-        'status': status
-    }
-
-    if message:
-        response.message = message
-
-    if data is not None:
-        response.data = data
-
-    return jsonify(response), status
+def get_profile(current_user):
+    return api_response(data=current_user['profile'])
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 3000)))
