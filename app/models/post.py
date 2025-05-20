@@ -12,7 +12,7 @@ class Post(db.Model):
     def __repr__(self):
         return f'Post id={self.id} user_id={self.user_id}'
     
-    def to_dict(self, include_user=False):
+    def to_dict(self, include_user=False, include_likes=False, current_user=None):
         data = {
             'id': self.id,
             'user_id': self.user_id,
@@ -22,9 +22,15 @@ class Post(db.Model):
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
-        
         if include_user:
             user = User.query.get(self.user_id)
             data['user'] = user.to_dict()
             
+        if include_likes:
+            data['like_count'] = Like.query.filter_by(post_id=self.id).count()
+            if current_user:
+                data['liked_by_current_user'] = Like.query.filter_by(post_id=self.id, user_id=current_user.id).first() is not None
+            else:
+                data['liked_by_current_user'] = False
         return data
+

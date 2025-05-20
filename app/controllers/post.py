@@ -86,3 +86,58 @@ def get_user_posts(current_user, user_id):
     }
     
     return api_response(data=response_data)
+
+@post_bp.route('/<int:post_id>/like', methods=['POST'])
+@token_required
+def like_post(current_user, post_id):
+    target_post = Post.query.get(post_id)
+    if not target_post:
+        return api_response(message="Post does not exist!", status=404)
+
+    existing = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+    if existing:
+        return api_response(message="Already liked this post!", status=400)
+    like = Like(user_id=current_user.id, post_id=post_id)
+
+    try:
+        db.session.add(like)
+        db.session.commit()
+        return api_response(message="Liked post successfully!")
+    except Exception as e:
+        db.session.rollback()
+        return api_response(message=f"Error like post: {str(e)}", status=500)
+
+
+@post_bp.route('/<int:post_id>/like', methods=['DELETE'])
+@token_required
+def unlike_post(current_user, post_id):
+    target_post = Post.query.get(post_id)
+    if not target_post:
+        return api_response(message="Post does not exist!", status=404)
+
+    existing = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+    if existing is None or not existing:
+        return api_response(message="You have not liked this post!", status=400)
+
+    try:
+        db.session.delete(existing)
+        db.session.commit()
+        return api_response(message="Unliked post successfully")
+    except Exception as e:
+        db.session.rollback()
+        return api_response(message=f"Error unlike post: {str(e)}", status=500)
+
+@post_bp.route('/newsfeed', methods=['GET'])
+@token_required
+def view_news_feed(current_user):
+    # Get pagination parameters from query string
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    # Get posts from database with pagination
+    # [Complete this]
+
+    # Prepare response data
+    # [Complete this]
+
+    return api_response(data=response_data)

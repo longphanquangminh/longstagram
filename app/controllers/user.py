@@ -45,3 +45,51 @@ def edit_profile(current_user):
     except Exception as e:
         db.session.rollback()
         return api_response(message=f"Error updating profile: {str(e)}", status=500)
+
+@user_bp.route('/<int:user_id>/follow', methods=['POST'])
+@token_required
+def follow_user(current_user, user_id):
+    if current_user.id == user_id:
+        return api_response(message="Cannot follow yourself!", status=400)
+    target_user = User.query.get(user_id)
+    if not target_user:
+        return api_response(message="User does not exist!", status=404)
+    existing = Follow.query.filter_by(follower_id=current_user.id, following_id=user_id).first()
+    if existing:
+        return api_response(message="Already followed this user!", status=400)
+    follow = Follow(follower_id=current_user.id, following_id=user_id)
+    
+    try:
+        db.session.add(follow)
+        db.session.commit()
+        return api_response(message="Follow user successfully!")
+    except Exception as e:
+        db.session.rollback()
+        return api_response(message=f"Error following user: {str(e)}", status=500)
+
+@user_bp.route('/<int:user_id>/follow', methods=['DELETE'])
+@token_required
+def unfollow_user(current_user, user_id):
+    # Cannot unfollow self
+    if current_user.id == user_id:
+        return api_response(message="Cannot unfollow yourself!", status=400)
+  
+    # Check target exists
+    target_user = User.query.get(user_id)
+    if not target_user:
+        return api_response(message="User does not exist!", status=404)
+  
+    # Check existing follow relationship
+    existing = Follow.query.filter_by(follower_id=current_user.id, following_id=user_id).first()
+    if existing is None or not existing:
+        return api_response(message="You have not followed this user before!", status=400)
+        
+  
+    # Remove follow relationship
+    try:
+        db.session.delete(existing)
+        db.session.commit()
+        return api_response(message="Unfollow user successfully!")
+    except Exception as e:
+        db.session.rollback()
+        return api_response(message=f"Error unfollowing user: {str(e)}", status=500)

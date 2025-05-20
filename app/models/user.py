@@ -25,13 +25,20 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
     
-    def to_dict(self):
-        return {
+    def to_dict(self, viewer=None):
+        data =  {
             'id': self.id,
             'username': self.username,
             'email': self.email,
             'fullname': self.fullname,
             'bio': self.bio,
             'profile_picture': self.profile_picture,
-            'created_at': self.created_at,
+            'created_at': self.created_at
         }
+
+        if viewer:
+            data['follower_count'] = Follow.query.filter_by(following_id=self.id).count()
+            data['following_count'] = Follow.query.filter_by(follower_id=self.id).count()
+            data['is_following'] = Follow.query.filter_by(follower_id=viewer.id, following_id=self.id).first() is not None
+            
+        return data
