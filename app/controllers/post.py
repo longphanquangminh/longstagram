@@ -135,6 +135,7 @@ def view_news_feed(current_user):
     per_page = request.args.get('per_page', 10, type=int)
 
     # Get posts from database with pagination
+    
     # [Complete this]
 
     # Prepare response data

@@ -2,8 +2,9 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-
+from app.models.user import User
 from app.utils import api_response
+from app import db
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -21,7 +22,7 @@ def register():
         return api_response(message="Invalid email format!", status=400)
     if len(password) < 6:
         return api_response(message="Password must be at least 6 characters long!", status=400)
-    if not full_name:
+    if not fullname:
         return api_response(message="Missing full name!", status=400)
 
     if User.query.filter_by(username=data['username']).first():

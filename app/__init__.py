@@ -2,10 +2,12 @@ import os
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 # Initialize extensions
 jwt = JWTManager()
 db = SQLAlchemy()
+migrate = Migrate()
 
 UPLOAD_FOLDER = 'uploads'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +20,7 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
     jwt.init_app(app)
     db.init_app(app)
+    migrate.init_app(app, db)
 
     from app.controllers.auth import auth_bp
     from app.controllers.user import user_bp
