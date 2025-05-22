@@ -1,5 +1,5 @@
 from flask import Blueprint
-
+from app import db
 from app.utils import api_response, token_required
 from app.models.user import User
 
