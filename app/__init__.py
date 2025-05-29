@@ -25,10 +25,12 @@ def create_app():
     from app.controllers.auth import auth_bp
     from app.controllers.user import user_bp
     from app.controllers.upload import upload_bp
+    from app.controllers.post import post_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(user_bp, url_prefix='/api/user')
     app.register_blueprint(upload_bp, url_prefix='/api/upload')
+    app.register_blueprint(post_bp, url_prefix='/api/post')
 
     @app.route('/uploads/<filename>')
     def uploaded_file(filename):

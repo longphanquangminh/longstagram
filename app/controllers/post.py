@@ -2,6 +2,10 @@ from flask import Blueprint, request
 from app import db
 from app.utils import api_response, token_required
 from app.models.post import Post
+from app.models.follow import Follow
+from app.models.like import Like
+from app.models.user import User
+from sqlalchemy import and_, or_
 
 post_bp = Blueprint('post', __name__)
 
@@ -42,7 +46,7 @@ def get_post(current_user, post_id):
     if not post or post.deleted:
         return api_response(message="Post not found!", status=404)
     
-    post_data = post.to_dict()
+    post_data = post.to_dict(include_user=True, include_likes=True, current_user=current_user)
     
     return api_response(data=post_data)
 
@@ -76,7 +80,7 @@ def get_user_posts(current_user, user_id):
         .paginate(page=page, per_page=per_page, error_out=False)
     
     response_data = {
-        'items': [post.to_dict() for post in posts.items],
+        'items': [post.to_dict(include_user=True, include_likes=True, current_user=current_user) for post in posts.items],
         'pagination': {
             'page': posts.page,
             'per_page': posts.per_page,
@@ -134,11 +138,37 @@ def view_news_feed(current_user):
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
-    # Get posts from database with pagination
+    # Get users that the current user follows
+    following_users = db.session.query(Follow.following_id).filter(
+        Follow.follower_id == current_user.id
+    ).all()
+    following_ids = [user[0] for user in following_users]
     
-    # [Complete this]
-
-    # Prepare response data
-    # [Complete this]
+    # Include the current user's posts in the news feed
+    following_ids.append(current_user.id)
+    
+    # Get posts from users that the current user follows
+    posts = Post.query.filter(
+        and_(
+            Post.user_id.in_(following_ids),
+            Post.deleted == False
+        )
+    ).order_by(Post.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Prepare response data with user info and like counts
+    post_items = []
+    for post in posts.items:
+        post_dict = post.to_dict(include_user=True, include_likes=True, current_user=current_user)
+        post_items.append(post_dict)
+    
+    response_data = {
+        'items': post_items,
+        'pagination': {
+            'page': posts.page,
+            'per_page': posts.per_page,
+            'total': posts.total,
+            'pages': posts.pages
+        }
+    }
 
     return api_response(data=response_data)
