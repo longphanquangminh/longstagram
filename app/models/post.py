@@ -1,4 +1,7 @@
 from app import db
+from datetime import datetime
+from app.models.user import User
+from app.models.like import Like
 
 class Post(db.Model):
     __tablename__ = 'posts'
